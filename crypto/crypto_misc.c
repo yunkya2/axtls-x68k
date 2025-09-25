@@ -53,6 +53,7 @@ static HCRYPTPROV gCryptProv;
 #define ENTROPY_POOL_SIZE 32
 #define ENTROPY_COUNTER1 ((((uint64_t)tv.tv_sec)<<32) | tv.tv_usec)
 #define ENTROPY_COUNTER2 rand()
+__attribute__((aligned(4)))
 static uint8_t entropy_pool[ENTROPY_POOL_SIZE];
 #endif
 
