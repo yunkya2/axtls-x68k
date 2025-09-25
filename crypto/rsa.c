@@ -44,7 +44,7 @@ void RSA_priv_key_new(RSA_CTX **ctx,
         const uint8_t *modulus, int mod_len,
         const uint8_t *pub_exp, int pub_len,
         const uint8_t *priv_exp, int priv_len
-#if CONFIG_BIGINT_CRT
+#ifdef CONFIG_BIGINT_CRT
       , const uint8_t *p, int p_len,
         const uint8_t *q, int q_len,
         const uint8_t *dP, int dP_len,
