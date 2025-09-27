@@ -324,6 +324,7 @@ bigint *bi_add(BI_CTX *ctx, bigint *bia, bigint *bib)
     pa = bia->comps;
     pb = bib->comps;
 
+#ifndef CONFIG_M68K_ASM
     do
     {
         comp  sl, rl, cy1;
@@ -335,6 +336,28 @@ bigint *bi_add(BI_CTX *ctx, bigint *bia, bigint *bib)
     } while (--n != 0);
 
     *pa = carry;                  /* do overflow */
+#else
+    /* 68000 optimized multi-precision addition using inline assembly */
+    __asm__ volatile(
+        "move.l    %2,%%d0\n"          /* load n into d0 */
+        "subq.w    #1,%%d0\n"          /* n-1 for dbra --> (X=0) */
+        "move.l    %0,%%a0\n"          /* pa into a0 */
+        "move.l    %1,%%a1\n"          /* pb into a1 */  
+        "1:\n"
+        "move.w    %%a1@+,%%d1\n"      /* load *pb++ */
+        "move.w    %%a0@,%%d2\n"       /* load *pa */
+        "addx.w    %%d1,%%d2\n"        /* d2 = *pa + *pb + carry */
+        "move.w    %%d2,%%a0@+\n"      /* store result to *pa++ */
+        "dbra      %%d0,1b\n"          /* loop while --n >= 0 */
+        "moveq     #0,%%d1\n"          /* clear d1 */
+        "addx.w    %%d1,%%d1\n"        /* get final carry into d1 */
+        "move.w    %%d1,%%a0@\n"       /* store final carry */
+        :
+        : "m"(pa), "m"(pb), "m"(n)
+        : "d0", "d1", "d2", "a0", "a1", "cc", "memory"
+    );
+#endif
+
     bi_free(ctx, bib);
     return trim(bia);
 }
@@ -361,6 +384,7 @@ bigint *bi_subtract(BI_CTX *ctx,
     pa = bia->comps;
     pb = bib->comps;
 
+#ifndef CONFIG_M68K_ASM
     do 
     {
         comp sl, rl, cy1;
@@ -370,6 +394,26 @@ bigint *bi_subtract(BI_CTX *ctx,
         carry = cy1 | (rl > sl);
         *pa++ = rl;
     } while (--n != 0);
+#else
+    __asm__ volatile(
+        "move.l    %3,%%d0\n"          /* load n into d0 */
+        "subq.w    #1,%%d0\n"          /* n-1 for dbra --> (X=0) */
+        "move.l    %1,%%a0\n"          /* pa into a0 */
+        "move.l    %2,%%a1\n"          /* pb into a1 */  
+        "1:\n"
+        "move.w    %%a1@+,%%d1\n"      /* load *pb++ */
+        "move.w    %%a0@,%%d2\n"       /* load *pa */
+        "subx.w    %%d1,%%d2\n"        /* d2 = *pa - *pb - carry */
+        "move.w    %%d2,%%a0@+\n"      /* store result to *pa++ */
+        "dbra      %%d0,1b\n"          /* loop while --n >= 0 */
+        "moveq     #0,%%d1\n"          /* clear d1 */
+        "addx.w    %%d1,%%d1\n"        /* get final carry into d1 */
+        "move.w    %%d1,%0\n"          /* store final carry */
+        : "=m"(carry)
+        : "m"(pa), "m"(pb), "m"(n)
+        : "d0", "d1", "d2", "a0", "a1", "cc", "memory"
+    );
+#endif
 
     if (is_negative)    /* indicate a negative result */
     {
@@ -396,6 +440,7 @@ static bigint *bi_int_multiply(BI_CTX *ctx, bigint *bia, comp b)
     /* clear things to start with */
     memset(r, 0, ((n+1)*COMP_BYTE_SIZE));
 
+#ifndef CONFIG_M68K_ASM
     do
     {
         long_comp tmp = *r + (long_comp)a[j]*b + carry;
@@ -404,6 +449,45 @@ static bigint *bi_int_multiply(BI_CTX *ctx, bigint *bia, comp b)
     } while (++j < n);
 
     *r = carry;
+#else
+
+    // r += a * b + carry
+    __asm__ volatile(
+        "move.l    %0,%%a0\n"          // a0 = r
+        "move.l    %1,%%a1\n"          // a1 = a
+        "move.w    %2,%%d0\n"          // d0.w = b
+        "move.l    %3,%%d1\n"          //
+        "subq.w    #1,%%d1\n"          // d1.w = n-1 (X=0)
+        "moveq.l   #0,%%d2\n"          // d2.l = carry
+
+#if 0       // r = r + a * b
+        "1:\n"
+        "move.w    %%a1@+,%%d3\n"      // d3.low = *a++
+        "mulu.w    %%d0,%%d3\n"        // d3.l = d3.low * b
+        "addx.l    %%d2,%%d3\n"        // d3.l += carry
+        "add.w     %%d3,%%a0@+\n"      // *r++ += d3.low (carry in X)
+        "swap      %%d3\n"             // d3.high
+        "moveq.l   #0,%%d2\n"          //
+        "addx.w    %%d3,%%d2\n"        // carry = d3.high + carry
+        "dbra      %%d1,1b\n"          // loop while --n >= 0
+#else       // r = a * b
+        "1:\n"
+        "move.w    %%a1@+,%%d3\n"      // d3.low = *a++
+        "mulu.w    %%d0,%%d3\n"        // d3.l = d3.low * b
+        "addx.l    %%d2,%%d3\n"        // d3.l += carry
+        "move.w     %%d3,%%a0@+\n"     // *r++ = d3.low
+        "swap      %%d3\n"             // d3.high
+        "moveq.l   #0,%%d2\n"          //
+        "move.w    %%d3,%%d2\n"        // carry = d3.high
+        "dbra      %%d1,1b\n"          // loop while --n >= 0
+#endif
+
+        "move.w    %%d2,%%a0@\n"       // *r = final carry
+        :
+        : "m"(r), "m"(a), "m"(b), "m"(n)
+        : "d0", "d1", "d2", "d3", "a0", "a1", "cc", "memory"
+    );
+#endif
     bi_free(ctx, bia);
     return trim(biR);
 }
@@ -874,6 +958,7 @@ static bigint *regular_multiply(BI_CTX *ctx, bigint *bia, bigint *bib,
             j = outer_partial-i-1;
         }
 
+#ifndef CONFIG_M68K_ASM
         do
         {
             if (inner_partial && r_index >= inner_partial) 
@@ -887,6 +972,49 @@ static bigint *regular_multiply(BI_CTX *ctx, bigint *bia, bigint *bib,
         } while (++j < n);
 
         sr[r_index] = carry;
+#else
+        int n2 = n;
+        if (inner_partial && inner_partial - r_index < n)
+        {
+            n2 = inner_partial - r_index;
+        }
+
+#if 0
+        do
+        {
+            tmp = sr[r_index] + ((long_comp)sa[j])*sb[i] + carry;
+            sr[r_index++] = (comp)tmp;              /* downsize */
+            carry = tmp >> COMP_BIT_SIZE;
+        } while (++j < n2);
+
+        sr[r_index] = carry;
+#else
+        // r += a * b + carry
+        __asm__ volatile(
+            "move.l    %0,%%a0\n"          // a0 = r
+            "move.l    %1,%%a1\n"          // a1 = a
+            "move.w    %2,%%d0\n"          // d0.w = b
+            "move.l    %3,%%d1\n"          //
+            "subq.w    #1,%%d1\n"          // d1.w = n-1 (X=0)
+            "moveq.l   #0,%%d2\n"          // d2.l = carry
+            "1:\n"
+            "move.w    %%a1@+,%%d3\n"      // d3.low = *a++
+            "mulu.w    %%d0,%%d3\n"        // d3.l = d3.low * b
+            "addx.l    %%d2,%%d3\n"        // d3.l += carry
+            "add.w     %%d3,%%a0@+\n"      // *r++ += d3.low (carry in X)
+            "swap      %%d3\n"             // d3.high
+            "moveq.l   #0,%%d2\n"          //
+            "addx.w    %%d3,%%d2\n"        // carry = d3.high + carry
+            "dbra      %%d1,1b\n"          // loop while --n >= 0
+
+            "move.w    %%d2,%%a0@\n"       // *r = final carry
+            :
+            : "a"(&sr[r_index]), "a"(&sa[j]), "m"(sb[i]), "d"(n2 - j)
+            : "d0", "d1", "d2", "d3", "a0", "a1", "cc", "memory"
+        );
+#endif
+
+#endif
     } while (++i < t);
 
     bi_free(ctx, bia);
