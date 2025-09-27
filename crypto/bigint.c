@@ -337,24 +337,77 @@ bigint *bi_add(BI_CTX *ctx, bigint *bia, bigint *bib)
 
     *pa = carry;                  /* do overflow */
 #else
-    /* 68000 optimized multi-precision addition using inline assembly */
+    // pa += pb
     __asm__ volatile(
-        "move.l    %2,%%d0\n"          /* load n into d0 */
-        "subq.w    #1,%%d0\n"          /* n-1 for dbra --> (X=0) */
-        "move.l    %0,%%a0\n"          /* pa into a0 */
-        "move.l    %1,%%a1\n"          /* pb into a1 */  
-        "1:\n"
-        "move.w    %%a1@+,%%d1\n"      /* load *pb++ */
-        "move.w    %%a0@,%%d2\n"       /* load *pa */
-        "addx.w    %%d1,%%d2\n"        /* d2 = *pa + *pb + carry */
-        "move.w    %%d2,%%a0@+\n"      /* store result to *pa++ */
-        "dbra      %%d0,1b\n"          /* loop while --n >= 0 */
-        "moveq     #0,%%d1\n"          /* clear d1 */
-        "addx.w    %%d1,%%d1\n"        /* get final carry into d1 */
-        "move.w    %%d1,%%a0@\n"       /* store final carry */
+        "move.l  %0,%%a0\n"             // a0 = pa
+        "move.l  %1,%%a1\n"             // a1 = pb
+
+        "move.l  %2,%%d0\n"             // d0 = n
+        "move.w  %%d0,%%d1\n"
+        "lsr.w   #3,%%d1\n"
+        "andi.w  #0x0007,%%d0\n"
+        "andi    #0xef,%%ccr\n"
+
+        "bra.s   11f\n"
+        "10:\n"
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "11:\n"
+        "dbra    %%d1,10b\n"
+
+        "bra.s   21f\n"
+        "20:\n"
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "21:\n"
+        "dbra    %%d0,20b\n"
+
+        "moveq   #0,%%d0\n"           // d0 = 0
+        "addx.w  %%d0,%%d0\n"         // get final carry into d0
+        "move.w  %%d0,%%a0@\n"        // store final carry
         :
         : "m"(pa), "m"(pb), "m"(n)
-        : "d0", "d1", "d2", "a0", "a1", "cc", "memory"
+        : "d0", "d1", "d2", "d3", "a0", "a1", "cc", "memory"
     );
 #endif
 
@@ -396,22 +449,75 @@ bigint *bi_subtract(BI_CTX *ctx,
     } while (--n != 0);
 #else
     __asm__ volatile(
-        "move.l    %3,%%d0\n"          /* load n into d0 */
-        "subq.w    #1,%%d0\n"          /* n-1 for dbra --> (X=0) */
-        "move.l    %1,%%a0\n"          /* pa into a0 */
-        "move.l    %2,%%a1\n"          /* pb into a1 */  
-        "1:\n"
-        "move.w    %%a1@+,%%d1\n"      /* load *pb++ */
-        "move.w    %%a0@,%%d2\n"       /* load *pa */
-        "subx.w    %%d1,%%d2\n"        /* d2 = *pa - *pb - carry */
-        "move.w    %%d2,%%a0@+\n"      /* store result to *pa++ */
-        "dbra      %%d0,1b\n"          /* loop while --n >= 0 */
-        "moveq     #0,%%d1\n"          /* clear d1 */
-        "addx.w    %%d1,%%d1\n"        /* get final carry into d1 */
-        "move.w    %%d1,%0\n"          /* store final carry */
+        "move.l  %1,%%a0\n"             // a0 = pa
+        "move.l  %2,%%a1\n"             // a1 = pb
+
+        "move.l  %3,%%d0\n"             // d0 = n
+        "move.w  %%d0,%%d1\n"
+        "lsr.w   #3,%%d1\n"
+        "andi.w  #0x0007,%%d0\n"
+        "andi    #0xef,%%ccr\n"
+
+        "bra.s   11f\n"
+        "10:\n"
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+
+        "11:\n"
+        "dbra    %%d1,10b\n"
+
+        "bra.s   21f\n"
+        "20:\n"
+        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.w  %%a0@,%%d3\n"        // d3 = *pa
+        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "21:\n"
+        "dbra    %%d0,20b\n"
+
+        "moveq   #0,%%d0\n"           // d0 = 0
+        "addx.w  %%d0,%%d0\n"         // get final carry into d0
+        "move.w  %%d0,%0\n"           // store final carry
         : "=m"(carry)
         : "m"(pa), "m"(pb), "m"(n)
-        : "d0", "d1", "d2", "a0", "a1", "cc", "memory"
+        : "d0", "d1", "d2", "d3", "a0", "a1", "cc", "memory"
     );
 #endif
 
