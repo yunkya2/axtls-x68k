@@ -123,8 +123,22 @@ static void check(const bigint *bi);
         : "a"(a), "a"(b), "d"(c)    \
         : "d0", "d1", "a0", "a1", "memory"    \
     );
+#define bi_memclr(a,c)    \
+    __asm__ volatile(               \
+        "move.l  %0,%%a0\n"         \
+        "move.w  %1,%%d0\n"         \
+        "subq.w  #1,%%d0\n"         \
+        "moveq.l #0,%%d1\n"         \
+        "10:"                       \
+        "move.w  %%d1,%%a0@+\n"     \
+        "dbra %%d0,10b\n"           \
+        :                           \
+        : "a"(a), "d"(c)            \
+        : "d0", "d1", "a0", "memory"    \
+    );
 #else
 #define bi_memcpy(a,b,c)    memcpy(a,b,c*sizeof(comp))
+#define bi_memclr(a,c)      memset(a,0,c*sizeof(comp))
 #endif
 
 /**
@@ -592,7 +606,7 @@ bigint *bi_divide(BI_CTX *ctx, bigint *u, bigint *v, int is_mod)
     d = (comp)((long_comp)COMP_RADIX/(V1+1));
 
     /* clear things to start with */
-    memset(quotient->comps, 0, ((quotient->size)*COMP_BYTE_SIZE));
+    bi_memclr(quotient->comps, quotient->size);
 
     /* normalise */
     if (d > 1)
@@ -791,7 +805,7 @@ static bigint *comp_left_shift(bigint *biR, int num_shifts)
         *x-- = *y--;
     } while (i--);
 
-    memset(biR->comps, 0, num_shifts*COMP_BYTE_SIZE); /* zero LS comps */
+    bi_memclr(biR->comps, num_shifts); /* zero LS comps */
     return biR;
 }
 #endif
@@ -808,7 +822,7 @@ bigint *bi_import(BI_CTX *ctx, const uint8_t *data, int size)
     bigint *biR = alloc(ctx, (size+COMP_BYTE_SIZE-1)/COMP_BYTE_SIZE);
     int i, j = 0, offset = 0;
 
-    memset(biR->comps, 0, biR->size*COMP_BYTE_SIZE);
+    bi_memclr(biR->comps, biR->size);
 
     for (i = size-1; i >= 0; i--)
     {
@@ -1007,7 +1021,7 @@ static bigint *regular_multiply(BI_CTX *ctx, bigint *bia, bigint *bib,
     check(bib);
 
     /* clear things to start with */
-    memset(biR->comps, 0, ((n+t)*COMP_BYTE_SIZE));
+    bi_memclr(biR->comps, n+t);
 
     do 
     {
@@ -1181,7 +1195,7 @@ static bigint *regular_square(BI_CTX *ctx, bigint *bi)
     long_comp carry;
 
 #ifndef CONFIG_M68K_ASM
-    memset(w, 0, biR->size*COMP_BYTE_SIZE);
+    bi_memclr(w, biR->size);
 
     do
     {
@@ -1360,7 +1374,7 @@ static void more_comps(bigint *bi, int n)
 
     if (n > bi->size)
     {
-        memset(&bi->comps[bi->size], 0, (n-bi->size)*COMP_BYTE_SIZE);
+        bi_memclr(&bi->comps[bi->size], (n-bi->size));
     }
 
     bi->size = n;
