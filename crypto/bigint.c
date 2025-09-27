@@ -350,45 +350,37 @@ bigint *bi_add(BI_CTX *ctx, bigint *bia, bigint *bib)
 
         "bra.s   11f\n"
         "10:\n"
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "addx.w  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
         "11:\n"
         "dbra    %%d1,10b\n"
@@ -460,45 +452,37 @@ bigint *bi_subtract(BI_CTX *ctx,
 
         "bra.s   11f\n"
         "10:\n"
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.w  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.w  %%a0@,%%d3\n"        // d3 = *pa
-        "subx.w  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "move.w  %%d3,%%a0@+\n"       // *pa++ = d3
+        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
+        "move.l  %%a0@,%%d3\n"        // d3 = *pa
+        "swap    %%d2\n"
+        "swap    %%d3\n"
+        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
+        "swap    %%d3\n"
+        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
 
         "11:\n"
         "dbra    %%d1,10b\n"
