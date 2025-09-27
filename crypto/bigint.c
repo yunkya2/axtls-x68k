@@ -90,6 +90,42 @@ static void check(const bigint *bi);
 #define check(A)                /**< disappears in normal production mode */
 #endif
 
+#ifdef CONFIG_M68K_ASM
+#define bi_memcpy(a,b,c)    \
+    __asm__ volatile(               \
+        "move.l  %0,%%a0\n"         \
+        "move.l  %1,%%a1\n"         \
+\
+        "move.w  %2,%%d0\n"         \
+        "move.w  %%d0,%%d1\n"       \
+        "lsr.w   #4,%%d1\n"         \
+        "andi.w  #0x000f,%%d0\n"    \
+        "bra.s   11f\n"             \
+\
+        "10:"                       \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "move.l  %%a1@+,%%a0@+\n"   \
+        "11:"                       \
+        "dbra    %%d1,10b\n"        \
+        "bra.s   21f\n"             \
+\
+        "20:"                       \
+        "move.w  %%a1@+,%%a0@+\n"   \
+        "21:"                       \
+        "dbra %%d0,20b\n"           \
+        :                           \
+        : "a"(a), "a"(b), "d"(c)    \
+        : "d0", "d1", "a0", "a1", "memory"    \
+    );
+#else
+#define bi_memcpy(a,b,c)    memcpy(a,b,c*sizeof(comp))
+#endif
 
 /**
  * @brief Start a new bigint context.
@@ -262,7 +298,7 @@ bigint *bi_clone(BI_CTX *ctx, const bigint *bi)
 {
     bigint *biR = alloc(ctx, bi->size);
     check(bi);
-    memcpy(biR->comps, bi->comps, bi->size*COMP_BYTE_SIZE);
+    bi_memcpy(biR->comps, bi->comps, bi->size);
     return biR;
 }
 
@@ -433,7 +469,7 @@ bigint *bi_divide(BI_CTX *ctx, bigint *u, bigint *v, int is_mod)
     do
     {
         /* get a temporary short version of u */
-        memcpy(tmp_u->comps, &u->comps[u->size-n-1-j], (n+1)*COMP_BYTE_SIZE);
+        bi_memcpy(tmp_u->comps, &u->comps[u->size-n-1-j], (n+1));
 
         /* calculate q' */
         if (U(0) == V1)
@@ -485,7 +521,7 @@ bigint *bi_divide(BI_CTX *ctx, bigint *u, bigint *v, int is_mod)
         }
 
         /* copy back to u */
-        memcpy(&u->comps[u->size-n-1-j], tmp_u->comps, (n+1)*COMP_BYTE_SIZE);
+        bi_memcpy(&u->comps[u->size-n-1-j], tmp_u->comps, (n+1));
     } while (++j <= m);
 
     bi_free(ctx, tmp_u);
