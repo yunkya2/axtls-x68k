@@ -133,7 +133,7 @@ void SHA1_Final(uint8_t *digest, SHA1_CTX *);
 #define SHA256_SIZE   32
 
 #ifndef SHA256_CTX
-#define SHA256_CTX SHA256_CTX
+//#define SHA256_CTX SHA256_CTX
 typedef struct
 {
     uint32_t total[2];
