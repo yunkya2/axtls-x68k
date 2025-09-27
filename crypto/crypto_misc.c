@@ -131,8 +131,9 @@ EXP_FUNC void STDCALL RNG_initialize()
     }
 #elif !defined(__ets__)
     /* start of with a stack to copy across */
-    int i = rand();
-    memcpy(entropy_pool, &i, ENTROPY_POOL_SIZE);
+    for (int i = 0; i < ENTROPY_POOL_SIZE; i++) {
+        entropy_pool[i] = (uint8_t)(rand());
+    }
     #ifdef __ANDROID__
     /* Later android releases have rand_r(), but classic ones, e.g.
        android-3 (1.5) have jrand48(). */
