@@ -339,49 +339,28 @@ bigint *bi_add(BI_CTX *ctx, bigint *bia, bigint *bib)
 #else
     // pa += pb
     __asm__ volatile(
-        "move.l  %0,%%a0\n"             // a0 = pa
-        "move.l  %1,%%a1\n"             // a1 = pb
+        "move.l  %0,%%a0\n"           // a0 = pa
+        "move.l  %1,%%a1\n"           // a1 = pb
 
-        "move.l  %2,%%d0\n"             // d0 = n
+        "move.l  %2,%%d0\n"           // d0 = n
         "move.w  %%d0,%%d1\n"
-        "lsr.w   #3,%%d1\n"
-        "andi.w  #0x0007,%%d0\n"
+        "lsr.w   #4,%%d1\n"
+        "andi.w  #0x000f,%%d0\n"
         "andi    #0xef,%%ccr\n"
-
         "bra.s   11f\n"
+
+#define ADDX_LONG    \
+        "move.l  %%a1@+,%%d2\n"       /* d2 = *pb++              */ \
+        "move.l  %%a0@,%%d3\n"        /* d3 = *pa                */ \
+        "swap    %%d2\n"                                            \
+        "swap    %%d3\n"                                            \
+        "addx.l  %%d2,%%d3\n"         /* d3 = *pa + *pb + carry  */ \
+        "swap    %%d3\n"                                            \
+        "move.l  %%d3,%%a0@+\n"       /* *pa++ = d3              */
+
         "10:\n"
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "addx.l  %%d2,%%d3\n"         // d3 = *pa + *pb + carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
+        ADDX_LONG   ADDX_LONG   ADDX_LONG   ADDX_LONG
+        ADDX_LONG   ADDX_LONG   ADDX_LONG   ADDX_LONG
         "11:\n"
         "dbra    %%d1,10b\n"
 
@@ -441,49 +420,28 @@ bigint *bi_subtract(BI_CTX *ctx,
     } while (--n != 0);
 #else
     __asm__ volatile(
-        "move.l  %1,%%a0\n"             // a0 = pa
-        "move.l  %2,%%a1\n"             // a1 = pb
+        "move.l  %1,%%a0\n"           // a0 = pa
+        "move.l  %2,%%a1\n"           // a1 = pb
 
-        "move.l  %3,%%d0\n"             // d0 = n
+        "move.l  %3,%%d0\n"           // d0 = n
         "move.w  %%d0,%%d1\n"
-        "lsr.w   #3,%%d1\n"
-        "andi.w  #0x0007,%%d0\n"
+        "lsr.w   #4,%%d1\n"
+        "andi.w  #0x000f,%%d0\n"
         "andi    #0xef,%%ccr\n"
-
         "bra.s   11f\n"
+
+#define SUBX_LONG    \
+        "move.l  %%a1@+,%%d2\n"       /* d2 = *pb++              */ \
+        "move.l  %%a0@,%%d3\n"        /* d3 = *pa                */ \
+        "swap    %%d2\n"                                            \
+        "swap    %%d3\n"                                            \
+        "subx.l  %%d2,%%d3\n"         /* d3 = *pa - *pb - carry  */ \
+        "swap    %%d3\n"                                            \
+        "move.l  %%d3,%%a0@+\n"       /* *pa++ = d3              */
+
         "10:\n"
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
-        "move.l  %%a1@+,%%d2\n"       // d2 = *pb++
-        "move.l  %%a0@,%%d3\n"        // d3 = *pa
-        "swap    %%d2\n"
-        "swap    %%d3\n"
-        "subx.l  %%d2,%%d3\n"         // d3 = *pa - *pb - carry
-        "swap    %%d3\n"
-        "move.l  %%d3,%%a0@+\n"       // *pa++ = d3
-
+        SUBX_LONG   SUBX_LONG   SUBX_LONG   SUBX_LONG
+        SUBX_LONG   SUBX_LONG   SUBX_LONG   SUBX_LONG
         "11:\n"
         "dbra    %%d1,10b\n"
 
