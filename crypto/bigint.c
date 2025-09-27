@@ -1179,6 +1179,8 @@ static bigint *regular_square(BI_CTX *ctx, bigint *bi)
     comp *w = biR->comps;
     comp *x = bi->comps;
     long_comp carry;
+
+#ifndef CONFIG_M68K_ASM
     memset(w, 0, biR->size*COMP_BYTE_SIZE);
 
     do
@@ -1216,6 +1218,62 @@ static bigint *regular_square(BI_CTX *ctx, bigint *bi)
         w[i+t] = (comp)tmp;
         w[i+t+1] = tmp >> COMP_BIT_SIZE;
     } while (++i < t);
+#else
+    w[t * 2] = 0;
+
+    // x * x
+    __asm__ volatile(
+        "move.l  %0,%%a0\n"          // a0 = w
+        "move.l  %1,%%a1\n"          // a1 = x
+        "move.l  %2,%%d0\n"          // d0 = t
+        "subq.w  #1,%%d0\n"
+
+        "1:\n"
+        "move.w  %%a1@+,%%d1\n"      // d1 = *x++
+        "mulu.w  %%d1,%%d1\n"        // d1 = d1 * d1
+        "move.w  %%d1,%%a0@+\n"      // *w++ = d1.low
+        "swap    %%d1\n"
+        "move.w  %%d1,%%a0@+\n"      // *w++ = d1.high
+        "dbra    %%d0,1b\n"          // loop while --n >= 0
+        :
+        : "m"(w), "m"(x), "m"(t)
+        : "d0", "d1", "a0", "a1", "cc", "memory"
+    );
+
+    for (i = 0; i < t - 1; i++)
+    {
+        __asm__ volatile(
+            "move.l  %0,%%a0\n"          // a0 = w
+            "move.l  %1,%%a1\n"          // a1 = x
+            "move.w  %2,%%d0\n"          // d0 = t
+
+            "move.w  %%a1@+,%%d1\n"      //
+            "bra.s   11f\n"
+
+            "10:\n"
+            "move.w  %%a1@+,%%d2\n"      //
+            "mulu.w  %%d1,%%d2\n"        //
+            "add.l   %%d2,%%d2\n"        //
+            "moveq   #0,%%d3\n"          //
+            "addx.w  %%d3,%%d3\n"        //
+
+            "add.w   %%d2,%%a0@+\n"      //
+            "move.l  %%a0,%%a2\n"        //
+            "swap    %%d2\n"
+            "move.w  %%a2@,%%d4\n"       //
+            "addx.w  %%d2,%%d4\n"        //
+            "move.w  %%d4,%%a2@+\n"      //
+            "move.w  %%a2@,%%d4\n"       //
+            "addx.w  %%d3,%%d4\n"        //
+            "move.w  %%d4,%%a2@+\n"      //
+            "11:\n"
+            "dbra    %%d0,10b\n"
+            :
+            : "a"(&w[i * 2 + 1]), "a"(&x[i]), "d"(t - i - 1)
+            : "d0", "d1", "d2", "d3", "d4", "a0", "a1", "a2", "cc", "memory"
+        );
+    }
+#endif
 
     bi_free(ctx, bi);
     return trim(biR);
