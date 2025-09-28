@@ -326,7 +326,9 @@ bigint *bi_clone(BI_CTX *ctx, const bigint *bi)
 bigint *bi_add(BI_CTX *ctx, bigint *bia, bigint *bib)
 {
     int n;
+#ifndef CONFIG_M68K_ASM
     comp carry = 0;
+#endif
     comp *pa, *pb;
 
     check(bia);
@@ -491,9 +493,12 @@ bigint *bi_subtract(BI_CTX *ctx,
  */
 static bigint *bi_int_multiply(BI_CTX *ctx, bigint *bia, comp b)
 {
-    int j = 0, n = bia->size;
-    bigint *biR = alloc(ctx, n + 1);
+    int n = bia->size;
+#ifndef CONFIG_M68K_ASM
+    int j = 0;
     comp carry = 0;
+#endif
+    bigint *biR = alloc(ctx, n + 1);
     comp *r = biR->comps;
     comp *a = bia->comps;
 
@@ -1025,8 +1030,10 @@ static bigint *regular_multiply(BI_CTX *ctx, bigint *bia, bigint *bib,
 
     do 
     {
+#ifndef CONFIG_M68K_ASM
         long_comp tmp;
         comp carry = 0;
+#endif
         int r_index = i;
         j = 0;
 
@@ -1188,13 +1195,14 @@ bigint *bi_multiply(BI_CTX *ctx, bigint *bia, bigint *bib)
 static bigint *regular_square(BI_CTX *ctx, bigint *bi)
 {
     int t = bi->size;
-    int i = 0, j;
+    int i = 0;
     bigint *biR = alloc(ctx, t*2+1);
     comp *w = biR->comps;
     comp *x = bi->comps;
+#ifndef CONFIG_M68K_ASM
+    int j;
     long_comp carry;
 
-#ifndef CONFIG_M68K_ASM
     bi_memclr(w, biR->size);
 
     do
